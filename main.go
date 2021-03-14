@@ -5,25 +5,35 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 )
 
 func handler(conn net.Conn) {
-	err := conn.SetDeadline(time.Now().Add(10 * time.Second))
-
-	if err != nil {
-		log.Println("CONN TIMEOUT")
-	}
+	defer conn.Close()
 
 	scanner := bufio.NewScanner(conn)
+
+	i := 0
 
 	for scanner.Scan() {
 		ln := scanner.Text()
 		fmt.Println(ln)
-		fmt.Fprintf(conn, "I heard you say: %s\n", ln)
+		if i == 0 {
+			fmt.Fprintf(conn, "I heard you say: %s\n", ln)
+		}
+		if ln == "" {
+			break
+		}
+		i++
 	}
 
-	defer conn.Close()
+	body := `<!DOCTYPE html><html lang="en"><head><title>TCP Server</title></head><body>
+	<h1>hello world</h1></body></html>`
+
+	fmt.Fprint(conn, "HTTP/1.1 200 OK\r\n")
+	fmt.Fprintf(conn, "Content-Length: %d\r\n", len(body))
+	fmt.Fprint(conn, "Content-Type: text/html\r\n")
+	fmt.Fprint(conn, "\r\n")
+	fmt.Fprint(conn, body)
 
 	fmt.Println("Code got here.")
 }
